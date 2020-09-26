@@ -955,8 +955,10 @@ void _glfwPlatformGetFramebufferSize(_GLFWwindow* window,
                                      int* width, int* height)
 {
     _glfwPlatformGetWindowSize(window, width, height);
-    *width *= window->wl.scale;
-    *height *= window->wl.scale;
+    if (width)
+        *width *= window->wl.scale;
+    if (height)
+        *height *= window->wl.scale;
 }
 
 void _glfwPlatformGetWindowFrameSize(_GLFWwindow* window,
@@ -1125,6 +1127,19 @@ void _glfwPlatformSetWindowFloating(_GLFWwindow* window, GLFWbool enabled)
     // TODO
     _glfwInputError(GLFW_FEATURE_UNIMPLEMENTED,
                     "Wayland: Window attribute setting not implemented yet");
+}
+
+void _glfwPlatformSetWindowMousePassthrough(_GLFWwindow* window, GLFWbool enabled)
+{
+    if (enabled)
+    {
+        struct wl_region* region = wl_compositor_create_region(_glfw.wl.compositor);
+        wl_surface_set_input_region(window->wl.surface, region);
+        wl_region_destroy(region);
+    }
+    else
+        wl_surface_set_input_region(window->wl.surface, 0);
+    wl_surface_commit(window->wl.surface);
 }
 
 float _glfwPlatformGetWindowOpacity(_GLFWwindow* window)
@@ -1682,6 +1697,24 @@ const char* _glfwPlatformGetClipboardString(void)
     }
     _glfw.wl.clipboardString[len] = '\0';
     return _glfw.wl.clipboardString;
+}
+
+EGLenum _glfwPlatformGetEGLPlatform(EGLint** attribs)
+{
+    if (_glfw.egl.EXT_platform_base && _glfw.egl.EXT_platform_wayland)
+        return EGL_PLATFORM_WAYLAND_EXT;
+    else
+        return 0;
+}
+
+EGLNativeDisplayType _glfwPlatformGetEGLNativeDisplay(void)
+{
+    return _glfw.wl.display;
+}
+
+EGLNativeWindowType _glfwPlatformGetEGLNativeWindow(_GLFWwindow* window)
+{
+    return window->wl.native;
 }
 
 void _glfwPlatformGetRequiredInstanceExtensions(char** extensions)
